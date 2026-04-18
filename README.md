@@ -92,9 +92,17 @@ HOME ASSISTANT інтевфейс:
 ![HOME ASSISTANT інтевфейс](images/HA2.JPG)
 
 ⚙️ Деталі/модулі:
-    
+
+Development Board Modules Super Mini Development Board 32-Bit Single-Core Processor ESP32 C3 16Pin Type-C
+
 ![Деталі](images/ESP32C3.JPG)
+
+AHT10 High Precision Digital Temperature and Humidity Sensor Measurement Module I2C Communication
+
 ![Деталі](images/AHT10.JPG)
+
+5V Low Level Trigger One 1 Channel Relay Module Interface Board Shield
+
 ![Деталі](images/relay.JPG)
 
 
@@ -213,8 +221,16 @@ HOME ASSISTANT interface:
 
 ⚙️ Parts/Modules:
     
+Development Board Modules Super Mini Development Board 32-Bit Single-Core Processor ESP32 C3 16Pin Type-C
+
 ![Деталі](images/ESP32C3.JPG)
+
+AHT10 High Precision Digital Temperature and Humidity Sensor Measurement Module I2C Communication
+
 ![Деталі](images/AHT10.JPG)
+
+5V Low Level Trigger One 1 Channel Relay Module Interface Board Shield
+
 ![Деталі](images/relay.JPG)
 
 
