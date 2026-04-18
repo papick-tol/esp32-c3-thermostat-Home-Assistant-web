@@ -76,6 +76,8 @@ graph LR
     GND --> E[Транзистор C945 Emitter]
     C[Транзистор C945 Collector] --> IN[Реле IN]
 ```
+Схема:
+![Схема](images/shema.jpg)
 
 > ### ⚠️ Увага
 > **Безпека:** Цей пристрій керує нагрівачем, що працює з напругою 220V. 
@@ -190,6 +192,10 @@ graph LR
     GND --> E[C945 Emitter]
     C[C945 Collector] --> IN[Relay IN]
 ```
+
+
+![Схема](images/shema.jpg)
+
 
 > ### ⚠️ Warning
 >
