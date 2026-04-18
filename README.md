@@ -37,3 +37,11 @@ graph LR
 ### ⚠️ Увага
 
   Безпека: Цей пристрій керує нагрівачем, що працює з напругою 220V. Дотримуйся правил техніки безпеки при монтажі силової частини.
+
+WEB інтевфейс:
+![WEB інтевфейс ](images/web.JPG)
+
+HOME ASSISTANT інтевфейс:
+![HOME ASSISTANT інтевфейс](images/HA3.JPG)
+![HOME ASSISTANT інтевфейс](images/HA1.JPG)
+![HOME ASSISTANT інтевфейс](images/HA2.JPG)
