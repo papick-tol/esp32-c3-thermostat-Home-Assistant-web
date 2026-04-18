@@ -45,3 +45,9 @@ HOME ASSISTANT інтевфейс:
 ![HOME ASSISTANT інтевфейс](images/HA3.JPG)
 ![HOME ASSISTANT інтевфейс](images/HA1.JPG)
 ![HOME ASSISTANT інтевфейс](images/HA2.JPG)
+
+⚙️ Деталі/модулі:
+    
+![Деталі](images/ESP32C3.JPG)
+![Деталі](images/AHT10.JPG)
+![Деталі](images/relay.JPG)
