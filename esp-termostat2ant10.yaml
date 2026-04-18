@@ -1,0 +1,320 @@
+esphome:
+  name: esp-termostat2
+  friendly_name: ESP-Termostat2
+
+  on_boot:
+    priority: 200 # Змінено для кращої ініціалізації на ESP32
+    then:
+      - delay: 15s
+      - climate.control:
+          id: aqua_climate
+          target_temperature_low: !lambda "return id(aqua_target_temp).state - 0.2;"
+          target_temperature_high: !lambda "return id(aqua_target_temp).state + 0.1;"
+      - logger.log: "🚀 System started and values sync'd from memory"
+
+# Оновлено для ESP32-C3
+esp32:
+  board: esp32-c3-devkitm-1
+  variant: esp32c3
+  framework:
+    type: esp-idf # Більш стабільний для C3, або "arduino" якщо звик до нього
+
+preferences:
+  setup_priority: -100
+
+# --- СИСТЕМНІ СЛУЖБИ ---
+logger:
+api:
+debug:
+# Піднімаємо web server
+web_server:
+  port: 80
+
+ota:
+  - platform: esphome
+
+# синхронизуємо час, якщо не вийшло, відключаємо нічний режим, працюємо як звичайний термостат.
+time:
+  - platform: sntp
+    id: sntp_time
+    timezone: Europe/Kyiv
+    servers:
+      - 0.ua.pool.ntp.org
+      - 1.ua.pool.ntp.org
+
+wifi:
+  ssid: "my_wifi_network"
+  password: "my_password"
+  min_auth_mode: WPA
+  # Якщо нема WiFi підіймаємо свою точку доступу
+  ap:
+    ssid: "esp-termostat2"
+    password: "12345678"
+
+captive_portal:
+
+# --- ШИНИ ДАНИХ ---
+i2c:
+  sda: GPIO6
+  scl: GPIO7
+  scan: true
+
+one_wire:
+  - id: bus_aquarium
+    platform: gpio
+    pin: GPIO4
+
+# --- ДАТЧИКИ ---
+sensor:
+  # Акваріум (Dallas)
+  - platform: dallas_temp
+    one_wire_id: bus_aquarium
+    index: 0
+    name: "Aquarium Temp"
+    id: temp_sensor_1
+    update_interval: 10s
+    accuracy_decimals: 1
+    filters:
+      - delta: 0.1
+
+
+
+
+# Кімната (AHT10 через I2C)
+  - platform: aht10
+    variant: AHT10
+    update_interval: 30s
+    temperature:
+      name: "Room Temp"
+      id: temp_sensor_room
+      accuracy_decimals: 1
+      filters:
+        - offset: -2.2
+          # Віднімаємо різницю, щоб вирівняти з Dallas
+        - lambda: return x;
+        - delta: 0.1
+
+    humidity:
+      name: "Room Humidity"
+      id: room_humidity
+      accuracy_decimals: 0.0
+      filters:
+        - delta: 1.0
+        - lambda: return x;
+  - platform: debug
+    free:
+      name: "Free Heap"
+
+  - platform: wifi_signal
+    name: "WiFi Signal Level"
+    update_interval: 120s
+
+text_sensor:
+  - platform: debug
+    reset_reason:
+      name: "Reset Reason"
+  - platform: version
+    name: "ESPHome Version"
+
+# --- НАЛАШТУВАННЯ (Numbers) ---
+number:
+  - platform: template
+    name: "Aquarium Target Temp"
+    id: aqua_target_temp
+    icon: "mdi:thermometer-lines"
+    unit_of_measurement: "°C"
+    min_value: 20
+    max_value: 30
+    step: 0.1
+    mode: BOX 
+    restore_value: true
+    initial_value: 25
+    optimistic: true
+    set_action:
+      then:
+        - climate.control:
+            id: aqua_climate
+            target_temperature_low: !lambda "return x - 0.2;"
+            target_temperature_high: !lambda "return x + 0.1;"
+
+  - platform: template
+    name: "Emergency Drop Delta"
+    id: aqua_emergency_diff
+    icon: "mdi:thermometer-alert"
+    unit_of_measurement: "°C"
+    min_value: 0.1
+    max_value: 10.0
+    step: 0.1
+    mode: BOX
+    restore_value: true
+    initial_value: 4.1
+    optimistic: true
+
+# --- КЕРУВАННЯ (Switches) ---
+switch:
+  - platform: gpio
+    pin: GPIO5
+    name: "Heater Relay"
+    id: heater_switch
+
+  - platform: template
+    name: "Thermostat Master Switch"
+    icon: "mdi:power"
+    id: thermostat_enable
+    lambda: |-
+      return (id(aqua_climate).mode == CLIMATE_MODE_HEAT);
+    turn_on_action:
+      - climate.control:
+          id: aqua_climate
+          mode: HEAT
+    turn_off_action:
+      - climate.control:
+          id: aqua_climate
+          mode: "OFF"
+      - switch.turn_off: heater_switch
+
+  - platform: template
+    name: "Enable Night Schedule"
+    id: schedule_mode
+    icon: "mdi:calendar-clock"
+    optimistic: true
+    restore_mode: RESTORE_DEFAULT_ON
+
+# --- ТЕРМОСТАТ ---
+climate:
+  - platform: bang_bang
+    name: "esp-termostat2"
+    id: aqua_climate
+    sensor: temp_sensor_1
+    default_target_temperature_low: 25.5
+    default_target_temperature_high: 25.8
+    heat_action:
+      - switch.turn_on: heater_switch
+    idle_action:
+      - switch.turn_off: heater_switch
+
+# --- СВІТЛОДІОД ---
+output:
+  - platform: ledc # Використовуємо LEDC для ESP32 замість pwm
+    pin: GPIO10
+    id: led_pwm
+
+light:
+  - platform: monochromatic
+    output: led_pwm
+    name: "System Status LED"
+    id: sys_led
+    effects:
+      - strobe:
+          name: wifi_error_blink
+          colors:
+            - state: true
+              brightness: 100%
+              duration: 200ms
+            - state: false
+              duration: 200ms
+
+# --- АВТОМАТИЗАЦІЯ ---
+interval:
+  # 1. Світлодіод (Логіка перенесена для стабільності)
+  - interval: 2s
+    then:
+      - if:
+          condition:
+            not:
+              wifi.connected:
+          then:
+            - if:
+                condition:
+                  not:
+                    light.is_on: sys_led
+                then:
+                  - light.turn_on:
+                      id: sys_led
+                      effect: wifi_error_blink
+          else:
+            - if:
+                condition:
+                  switch.is_on: heater_switch
+                then:
+                  - if:
+                      condition:
+                        lambda: |-
+                          return id(sys_led).get_effect_name() != "none" || !id(sys_led).remote_values.is_on();
+                      then:
+                        - light.turn_on:
+                            id: sys_led
+                            effect: none
+                            brightness: 50%
+                else:
+                  - if:
+                      condition:
+                        light.is_on: sys_led
+                      then:
+                        - light.turn_off: sys_led
+
+  # 2. Розклад та Аварійний режим
+  - interval: 1min
+    then:
+      - if:
+          condition:
+            lambda: |-
+              float current_temp = id(temp_sensor_1).state;
+              float target_temp = id(aqua_target_temp).state;
+              float delta = id(aqua_emergency_diff).state;
+              if (std::isnan(current_temp)) return false;
+              return current_temp <= (target_temp - delta);
+          then:
+            - if:
+                condition:
+                  switch.is_off: thermostat_enable
+                then:
+                  - switch.turn_on: thermostat_enable
+                  - logger.log: "⚠️ EMERGENCY: Temperature Too LOW!"
+          
+          else:
+            - if:
+                condition:
+                  switch.is_on: schedule_mode
+                then:
+                  - if:
+                      condition:
+                        lambda: 'return id(sntp_time).now().is_valid();'
+                      then:
+                        - if:
+                            condition:
+                              lambda: |-
+                                auto time = id(sntp_time).now();
+                                int now_minutes = time.hour * 60 + time.minute;
+                                int start_off = 6 * 60 + 50;  // 06:50
+                                int end_off = 23 * 60 + 10;   // 23:10
+                                return (now_minutes >= start_off && now_minutes < end_off);
+                            then:
+                              - if:
+                                  condition:
+                                    switch.is_on: thermostat_enable
+                                  then:
+                                    - switch.turn_off: thermostat_enable
+                                    - logger.log: "Schedule: Day - OFF"
+                            else:
+                              - if:
+                                  condition:
+                                    switch.is_off: thermostat_enable
+                                  then:
+                                    - switch.turn_on: thermostat_enable
+                                    - logger.log: "Schedule: Night - ON"
+                      else:
+                        - if:
+                            condition:
+                              switch.is_off: thermostat_enable
+                            then:
+                              - switch.turn_on: thermostat_enable
+                              - logger.log: "EMERGENCY: No Time! Forcing ON."
+# Компонент	Пін ESP32-C3	Тип	      Коментар
+# +3.3V   	3V3	          Живлення	Для Dallas (DS18B20) та AHT10
+# GND	      GND	          Земля	    Спільний мінус для всіх компонентів
+# DS18B20 	GPIO4	        OneWire	  Обов'язково резистор 4.7кОм між GPIO4 та 3V3
+# AHT10     SDA	          GPIO6	    I2C	Безпечний пін
+# AHT10     SCL	          GPIO7	    I2C	Безпечний пін
+# Relay	    GPIO5	        Вихід	    Керування реле обігрівача
+# StaLED	  GPIO10	      Вихід	    Зовнішній LED (через резистор 220-470 Ом)
