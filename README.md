@@ -48,6 +48,8 @@ graph TD
     F -- Так --> G[Вимикаємо Master Switch]
     F -- Ні --> H[Вмикаємо Master Switch]
 ```
+Графіки роботи і інтерфейс в НА:
+![Графіки роботи](images/ha4.jpg)
 
 ## 🛠 Компоненти
 * **Контролер:** ESP32-C3 Mini.
@@ -156,6 +158,9 @@ graph TD
     F -- Yes --> G[Turn OFF Master Switch]
     F -- No --> H[Turn ON Master Switch]
 ```
+
+![gpaph](images/ha4.jpg)
+
 
 🛠 Components
 
