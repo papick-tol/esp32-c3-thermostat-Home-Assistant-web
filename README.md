@@ -14,6 +14,11 @@ A smart aquarium thermostat based on ESP32-C3. Features air temperature/humidity
 * **Апаратна надійність:** Схема керування реле через транзистор C945 (захист від невідповідності логічних рівнів).
 
 
+
+Увага!
+Запам'ятовується не стан з карточки термостата, а параметр
+    name: "Aquarium Target Temp"
+    id: aqua_target_temp
 ## 🧠 Логіка роботи термостата
 
 Система працює за ієрархічним принципом, де автоматизація керує головним вимикачем **`Thermostat Master Switch`**, а не безпосередньо реле. Це дозволяє зберігати контроль над станом термостата.
@@ -121,6 +126,12 @@ A smart aquarium thermostat based on ESP32-C3 with air temperature/humidity moni
     Climate Monitoring: Air temperature and humidity measurement (AHT10).
 
     Hardware Reliability: Relay driver circuit using a C945 NPN transistor (logic level shifting protection).
+
+
+Attention!
+It is not the status from the thermostat card that is remembered, but the parameter
+name: "Aquarium Target Temp"
+id: aqua_target_temp
 
 🧠 Thermostat Logic
 
