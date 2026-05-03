@@ -1,10 +1,10 @@
-# ESP32-C3 Aquarium Climate Controller
+# ESP32-C3 (ESP8266) Aquarium Climate Controller
 
 A smart aquarium thermostat based on ESP32-C3. Features air temperature/humidity monitoring, heater control with a night operation mode, a custom web control portal, and seamless integration with Home Assistant.
 
 <h1 align="center">English version below</h1>
 
-# Розумний термостат для акваріума на базі ESP32-C3 з підтримкою моніторингу температури повітря і вологості в кімнаті та керуванням нагрівачем акваріуму, враховує нічний тариф.
+# Розумний термостат для акваріума на базі ESP32-C3 (ESP8266) з підтримкою моніторингу температури повітря і вологості в кімнаті та керуванням нагрівачем акваріуму, враховує нічний тариф.
 
 ## 🚀 Можливості
 * **Точний термостат:** Режим "bang-bang" з налаштовуваним гістерезисом.
