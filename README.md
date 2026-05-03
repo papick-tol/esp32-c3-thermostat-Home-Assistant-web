@@ -15,7 +15,7 @@ A smart aquarium thermostat based on ESP32-C3. Features air temperature/humidity
 
 
 
-Увага!
+# Увага!
 Запам'ятовується не стан з карточки термостата, а параметр
     name: "Aquarium Target Temp"
     id: aqua_target_temp
@@ -128,12 +128,12 @@ A smart aquarium thermostat based on ESP32-C3 with air temperature/humidity moni
     Hardware Reliability: Relay driver circuit using a C945 NPN transistor (logic level shifting protection).
 
 
-Attention!
+# Attention!
 It is not the status from the thermostat card that is remembered, but the parameter
 name: "Aquarium Target Temp"
 id: aqua_target_temp
 
-🧠 Thermostat Logic
+## 🧠 Thermostat Logic
 
 The system operates on a hierarchical principle, where automation controls the Thermostat Master Switch rather than the relay directly. This maintains overall control over the thermostat's state.
 1. Emergency Mode (Priority #1)
