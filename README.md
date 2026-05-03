@@ -17,8 +17,11 @@ A smart aquarium thermostat based on ESP32-C3. Features air temperature/humidity
 
 # Увага!
 Запам'ятовується не стан з карточки термостата, а параметр
+
     name: "Aquarium Target Temp"
+    
     id: aqua_target_temp
+    
 ## 🧠 Логіка роботи термостата
 
 Система працює за ієрархічним принципом, де автоматизація керує головним вимикачем **`Thermostat Master Switch`**, а не безпосередньо реле. Це дозволяє зберігати контроль над станом термостата.
