@@ -133,7 +133,9 @@ A smart aquarium thermostat based on ESP32-C3 with air temperature/humidity moni
 
 # Attention!
 It is not the status from the thermostat card that is remembered, but the parameter
+
 name: "Aquarium Target Temp"
+
 id: aqua_target_temp
 
 ## 🧠 Thermostat Logic
