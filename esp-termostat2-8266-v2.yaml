@@ -38,8 +38,8 @@ time:
       - 1.ua.pool.ntp.org
 
 wifi:
-  ssid: "device"
-  password: "19papick70"
+  ssid: "хххххххх"
+  password: "хххххххххх"
   min_auth_mode: WPA
   ap:
     ssid: "Esp-Termostat2"
