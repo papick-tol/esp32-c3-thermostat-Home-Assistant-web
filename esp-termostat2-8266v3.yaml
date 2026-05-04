@@ -1,0 +1,286 @@
+esphome:
+  name: esp-termostat2
+  friendly_name: ESP-Termostat2
+
+  on_boot:
+    priority: 600
+    then:
+      - delay: 15s
+      - climate.control:
+          id: aqua_climate
+          target_temperature_low: !lambda "return id(aqua_target_temp_low).state;"
+          target_temperature_high: !lambda "return id(aqua_target_temp_hi).state;"
+      - logger.log: "🚀 System started and values sync'd from memory"
+
+preferences:
+  setup_priority: -100
+
+esp8266:
+  board: d1_mini
+  restore_from_flash: true
+
+# --- СИСТЕМНІ СЛУЖБИ ---
+logger:
+api:
+debug:
+web_server:
+  port: 80
+
+ota:
+  - platform: esphome
+
+time:
+  - platform: sntp
+    id: sntp_time
+    timezone: Europe/Kyiv
+    servers:
+      - 0.ua.pool.ntp.org
+      - 1.ua.pool.ntp.org
+
+wifi:
+  ssid: "XXXXXXX"
+  password: "XXXXXX"
+  min_auth_mode: WPA
+  ap:
+    ssid: "Esp-Termostat2"
+    password: "12345678"
+
+captive_portal:
+
+# --- ШИНИ ДАНИХ ---
+i2c:
+  sda: D2
+  scl: D1
+  scan: true
+
+one_wire:
+  - id: bus_aquarium
+    platform: gpio
+    pin: D4
+
+# --- ДАТЧИКИ ТЕМПЕРАТУРИ ---
+sensor:
+  - platform: dallas_temp
+    one_wire_id: bus_aquarium
+    index: 0
+    name: "Aquarium Temp"
+    id: temp_sensor_1
+    update_interval: 10s
+    filters:
+      - delta: 0.1
+      - offset: 1.7
+
+  # Кімната (AHT20 через I2C)
+  - platform: aht10
+    variant: AHT20
+    address: 0x38
+    temperature:
+      name: "Room Temp"
+      id: temp_sensor_room
+      accuracy_decimals: 1
+      filters:
+        - delta: 0.2
+
+    humidity:
+      name: "Room Humidity"
+      id: room_humidity
+      accuracy_decimals: 0
+      filters:
+        - delta: 1
+
+  # Тиск (BMP280 через I2C)
+  - platform: bmp280_i2c
+    address: 0x77
+    pressure:
+      name: "Barometric Pressure"
+      unit_of_measurement: "mmHg"
+      device_class: "atmospheric_pressure"
+      filters:
+        - lambda: "return (x * 0.750062) + 10.0;"
+        - delta: 0.1
+
+  - platform: debug
+    free:
+      name: "Free Heap"
+
+  - platform: wifi_signal
+    name: "WiFi Signal Level"
+    update_interval: 120s
+
+# --- КНОПКИ ---
+button:
+  - platform: restart
+    name: "Restart ESP-Termostat2"
+
+  - platform: template
+    name: "Sync Target Temps"
+    id: sync_target_btn
+    icon: "mdi:content-save-cog"
+    on_press:
+      - number.set:
+          id: aqua_target_temp_hi
+          value: !lambda 'return id(aqua_climate).target_temperature_high;'
+      - number.set:
+          id: aqua_target_temp_low
+          value: !lambda 'return id(aqua_climate).target_temperature_low;'
+      - logger.log: "💾 Current thermostat bounds saved to memory!"
+
+# --- НАЛАШТУВАННЯ (Numbers) ---
+number:
+  - platform: template
+    name: "Aqua Target Temp High"
+    id: aqua_target_temp_hi
+    icon: "mdi:thermometer-chevron-up"
+    unit_of_measurement: "°C"
+    min_value: 20
+    max_value: 40
+    step: 0.1
+    mode: BOX 
+    restore_value: true
+    initial_value: 25.8
+    optimistic: true
+    set_action:
+      then:
+        - climate.control:
+            id: aqua_climate
+            target_temperature_high: !lambda "return x;"
+
+  - platform: template
+    name: "Aqua Target Temp Low"
+    id: aqua_target_temp_low
+    icon: "mdi:thermometer-chevron-down"
+    unit_of_measurement: "°C"
+    min_value: 20
+    max_value: 40
+    step: 0.1
+    mode: BOX 
+    restore_value: true
+    initial_value: 25.5
+    optimistic: true
+    set_action:
+      then:
+        - climate.control:
+            id: aqua_climate
+            target_temperature_low: !lambda "return x;"
+
+  - platform: template
+    name: "Emergency Drop Delta"
+    id: aqua_emergency_diff
+    icon: "mdi:thermometer-alert"
+    unit_of_measurement: "°C"
+    min_value: 0.1
+    max_value: 10.0
+    step: 0.1
+    mode: BOX
+    restore_value: true
+    initial_value: 4.1
+    optimistic: true
+
+# --- КЕРУВАННЯ (Switches) ---
+switch:
+  - platform: gpio
+    pin: D5 # Твоє реле
+    name: "Heater Relay"
+    id: heater_switch
+
+  - platform: template
+    name: "Thermostat Master Switch"
+    icon: "mdi:power"
+    id: thermostat_enable
+    lambda: |-
+      return (id(aqua_climate).mode == CLIMATE_MODE_HEAT);
+    turn_on_action:
+      - climate.control:
+          id: aqua_climate
+          mode: HEAT
+    turn_off_action:
+      - climate.control:
+          id: aqua_climate
+          mode: "OFF"
+      - switch.turn_off: heater_switch
+
+  - platform: template
+    name: "Enable Night Schedule"
+    id: schedule_mode
+    icon: "mdi:calendar-clock"
+    optimistic: true
+    restore_mode: RESTORE_DEFAULT_ON
+
+# --- ТЕРМОСТАТ ---
+climate:
+  - platform: bang_bang
+    name: "Aqua Thermostat-1"
+    id: aqua_climate
+    sensor: temp_sensor_1
+    default_target_temperature_low: 25.5
+    default_target_temperature_high: 25.8
+    visual:
+      min_temperature: 20
+      max_temperature: 40
+      temperature_step: 0.1
+    heat_action:
+      - switch.turn_on: heater_switch
+    idle_action:
+      - switch.turn_off: heater_switch
+
+# --- АВТОМАТИЗАЦІЯ ---
+interval:
+  - interval: 1min
+    then:
+      - if:
+          # --- ЕТАП 1: АВАРІЯ (ХОЛОДНО) ---
+          condition:
+            lambda: |-
+              float current_temp = id(temp_sensor_1).state;
+              // Використовуємо нижню межу для розрахунку аварії
+              float target_temp = id(aqua_target_temp_low).state;
+              float delta = id(aqua_emergency_diff).state;
+              if (std::isnan(current_temp)) return false;
+              return current_temp <= (target_temp - delta);
+          then:
+            - if:
+                condition:
+                  switch.is_off: thermostat_enable
+                then:
+                  - switch.turn_on: thermostat_enable
+                  - logger.log: "⚠️ EMERGENCY: Temperature Too LOW!"
+          
+          # --- ЕТАП 2: РОЗКЛАД ---
+          else:
+            - if:
+                condition:
+                  switch.is_on: schedule_mode
+                then:
+                  - if:
+                      condition:
+                        lambda: 'return id(sntp_time).now().is_valid();'
+                      then:
+                        - if:
+                            condition:
+                              lambda: |-
+                                auto time = id(sntp_time).now();
+                                int now_minutes = time.hour * 60 + time.minute;
+                                int start_off = 6 * 60 + 50;  // 06:50
+                                int end_off = 23 * 60 + 10;   // 23:10
+                                return (now_minutes >= start_off && now_minutes < end_off);
+                            then:
+                              - if:
+                                  condition:
+                                    switch.is_on: thermostat_enable
+                                  then:
+                                    - switch.turn_off: thermostat_enable
+                                    - logger.log: "Schedule: Day - OFF"
+                            else:
+                              - if:
+                                  condition:
+                                    switch.is_off: thermostat_enable
+                                  then:
+                                    - switch.turn_on: thermostat_enable
+                                    - logger.log: "Schedule: Night - ON"
+                      else:
+                        - if:
+                            condition:
+                              switch.is_off: thermostat_enable
+                            then:
+                              - switch.turn_on: thermostat_enable
+                              - logger.log: "EMERGENCY: No Time! Forcing ON."
